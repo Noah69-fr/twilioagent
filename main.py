@@ -71,12 +71,24 @@ async def handle_media_stream(websocket: WebSocket):
     await websocket.accept()
 
     async with websockets.connect(
-        "wss://api.openai.com/v1/audio/speech",
+        "wss://api.openai.com/v1/audio/streaming",
         additional_headers={
             "Authorization": f"Bearer {OPENAI_API_KEY}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "OpenAI-Beta": "streaming-1"
         }
     ) as openai_ws:
+
+        # Send initial configuration
+        await openai_ws.send(json.dumps({
+            "model": "gpt-4-turbo-preview",
+            "messages": [
+                {"role": "system", "content": SYSTEM_MESSAGE},
+                {"role": "user", "content": "Bonjour, je souhaite louer un appartement."}
+            ],
+            "stream": True,
+            "voice": VOICE
+        }))
 
         await send_session_update(openai_ws)
         stream_sid = None
