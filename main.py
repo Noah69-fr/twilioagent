@@ -15,6 +15,12 @@ load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PORT = int(os.getenv("PORT", 3000))  # Replit uses port 3000
+VOICE = 'alloy'
+LOG_EVENT_TYPES = [
+    'response.content.done', 'rate_limits.updated', 'response.done',
+    'input_audio_buffer.committed', 'input_audio_buffer.speech_stopped',
+    'input_audio_buffer.speech_started', 'session.created'
+]
 
 if not OPENAI_API_KEY:
     raise ValueError("OPENAI_API_KEY is not set in the .env file")
