@@ -3,6 +3,7 @@ import os
 import json
 import base64
 import asyncio
+import aiohttp
 import websockets
 from fastapi import FastAPI, WebSocket, Request
 from fastapi.responses import HTMLResponse, JSONResponse
