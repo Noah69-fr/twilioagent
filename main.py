@@ -44,26 +44,21 @@ async def media_stream(websocket: WebSocket):
     print("✅ WebSocket Twilio connecté")
 
     try:
-        async with websockets.connect(
-            "wss://api.openai.com/v1/audio/speech",
-            additional_headers={
-                "Authorization": f"Bearer {OPENAI_API_KEY}"
-            }
-        ) as openai_ws:
-            while True:
-                message = await websocket.receive_text()
-                data = json.loads(message)
+        while True:
+            message = await websocket.receive_text()
+            data = json.loads(message)
 
-                if data.get("event") == "start":
-                    print(f"🚀 Stream démarré – callSid = {data['start']['callSid']}")
-                elif data.get("event") == "media":
-                    payload = data["media"]["payload"]
-                    audio_bytes = base64.b64decode(payload)
-                    await openai_ws.send(audio_bytes)
-                    print(f"🔊 Audio envoyé à OpenAI – {len(audio_bytes)} octets")
-                elif data.get("event") == "stop":
-                    print("🛑 Stream terminé")
-                    break
+            if data.get("event") == "start":
+                print(f"🚀 Stream démarré – callSid = {data['start']['callSid']}")
+            elif data.get("event") == "media":
+                payload = data["media"]["payload"]
+                audio_bytes = base64.b64decode(payload)
+                # Here we should make an HTTP POST request to OpenAI's API
+                # using aiohttp or httpx for the actual implementation
+                print(f"🔊 Audio reçu – {len(audio_bytes)} octets")
+            elif data.get("event") == "stop":
+                print("🛑 Stream terminé")
+                break
     except WebSocketDisconnect:
         print("❌ WebSocket Twilio déconnecté")
     except Exception as e:
