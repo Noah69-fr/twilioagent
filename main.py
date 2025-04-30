@@ -4,6 +4,7 @@ import json
 import base64
 import asyncio
 import websockets
+from openai import OpenAI
 from fastapi import FastAPI, WebSocket, Request
 from fastapi.responses import HTMLResponse
 from fastapi.websockets import WebSocketDisconnect
@@ -15,6 +16,7 @@ load_dotenv()
 
 # Configuration
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 # Variables de configuration d'enregistrement
 LOGS_DIRECTORY = "conversation_logs"
