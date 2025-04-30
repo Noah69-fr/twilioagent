@@ -678,6 +678,7 @@ name = "python-template"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "aiohttp" },
     { name = "fastapi" },
     { name = "flask" },
     { name = "flask-sock" },
@@ -689,6 +690,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "aiohttp", specifier = ">=3.11.18" },
     { name = "fastapi", specifier = ">=0.115.12" },
     { name = "flask", specifier = ">=3.1.0" },
     { name = "flask-sock", specifier = ">=0.7.0" },
