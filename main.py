@@ -49,12 +49,15 @@ async def media_stream(websocket: WebSocket):
     
     async def process_audio_and_respond():
         nonlocal audio_buffer
-        if len(audio_buffer) < 4000:  # Wait for enough audio data
+        if len(audio_buffer) < 8000:  # Wait for more audio data
             return
             
+        print(f"🎵 Processing audio buffer of size: {len(audio_buffer)}")
         # Convert audio to file-like object
         audio_data = audio_buffer
         audio_buffer = b""  # Reset buffer
+
+        try:
         
         # Transcribe with Whisper API
         async with aiohttp.ClientSession() as session:
@@ -89,10 +92,14 @@ async def media_stream(websocket: WebSocket):
                                 ai_response = chat_result['choices'][0]['message']['content']
                                 print(f"🤖 Réponse: {ai_response}")
                                 
-                                # Send response back to user
-                                response = VoiceResponse()
-                                response.say(ai_response, language="fr-FR")
-                                await websocket.send_text(str(response))
+                                # Generate speech markup
+                                twiml = VoiceResponse()
+                                twiml.say(ai_response, language="fr-FR", voice="Polly.Lea")
+                                
+                                # Send TwiML response through WebSocket
+                                print("📢 Sending voice response")
+                                await websocket.send_text(str(twiml))
+                                print("✅ Voice response sent")
 
     try:
         while True:
