@@ -4,6 +4,7 @@ import json
 import base64
 import asyncio
 import websockets
+from openai import OpenAI
 from fastapi import FastAPI, WebSocket, Request
 from fastapi.responses import HTMLResponse
 from fastapi.websockets import WebSocketDisconnect
