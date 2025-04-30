@@ -52,17 +52,19 @@ async def call_openai_api(endpoint, method, headers, data=None, files=None):
     
     if files:
         boundary = 'boundary'
-        body = []
+        body = bytearray()
         for key, value in files.items():
-            body.extend([
-                f'--{boundary}',
-                f'Content-Disposition: form-data; name="{key}"; filename="audio.wav"',
-                'Content-Type: audio/wav',
-                '',
-                value,
-            ])
-        body.extend([f'--{boundary}--', ''])
-        body = '\r\n'.join(body).encode('utf-8')
+            if key == 'file':
+                body.extend(f'--{boundary}\r\n'.encode('utf-8'))
+                body.extend(f'Content-Disposition: form-data; name="file"; filename="audio.wav"\r\n'.encode('utf-8'))
+                body.extend(b'Content-Type: audio/wav\r\n\r\n')
+                body.extend(value)
+                body.extend(b'\r\n')
+            else:
+                body.extend(f'--{boundary}\r\n'.encode('utf-8'))
+                body.extend(f'Content-Disposition: form-data; name="{key}"\r\n\r\n'.encode('utf-8'))
+                body.extend(f'{value}\r\n'.encode('utf-8'))
+        body.extend(f'--{boundary}--\r\n'.encode('utf-8'))
         headers['Content-Type'] = f'multipart/form-data; boundary={boundary}'
     else:
         body = json.dumps(data).encode('utf-8') if data else None
@@ -127,7 +129,7 @@ async def media_stream(websocket: WebSocket):
                 
                 # Generate speech markup
                 twiml = VoiceResponse()
-                twiml.say(ai_response, language="fr-FR", voice="Polly.Lea")
+                twiml.say(ai_response, language="fr-FR", voice="Polly.Lea-Neural")
                 
                 # Send TwiML response
                 print("📢 Sending voice response")
