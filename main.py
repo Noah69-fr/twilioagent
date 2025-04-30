@@ -72,12 +72,25 @@ async def media_stream(websocket: WebSocket):
     
     async def process_audio_and_respond():
         nonlocal audio_buffer
-        if len(audio_buffer) < 8000:
+        if len(audio_buffer) < 32000:  # Wait for more audio data
             return
             
         print(f"🎵 Processing audio buffer of size: {len(audio_buffer)}")
         audio_data = audio_buffer
         audio_buffer = b""
+        
+        # Convert audio to wav format
+        import wave
+        import io
+        
+        wav_buffer = io.BytesIO()
+        with wave.open(wav_buffer, 'wb') as wav_file:
+            wav_file.setnchannels(1)
+            wav_file.setsampwidth(2)
+            wav_file.setframerate(8000)
+            wav_file.writeframes(audio_data)
+        
+        wav_data = wav_buffer.getvalue()
 
         try:
             headers = {
@@ -90,7 +103,7 @@ async def media_stream(websocket: WebSocket):
                 '/v1/audio/transcriptions',
                 'POST',
                 headers,
-                files={'file': audio_data, 'model': 'whisper-1', 'language': 'fr'}
+                files={'file': wav_data, 'model': 'whisper-1', 'language': 'fr'}
             )
             
             user_text = transcription.get('text', '')
