@@ -33,6 +33,7 @@ async def handle_incoming_call(request: Request):
     print("✅ Twilio vient d'appeler /incoming-call")
     host = request.url.hostname or request.client.host
     response = VoiceResponse()
+    response.say("Bonjour! Je suis votre agent immobilier virtuel. Comment puis-je vous aider aujourd'hui?", language="fr-FR")
     connect = Connect()
     connect.stream(url=f"wss://{host}/media-stream")
     response.append(connect)
