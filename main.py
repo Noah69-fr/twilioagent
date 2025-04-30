@@ -46,27 +46,22 @@ async def handle_incoming_call(request: Request):
     return HTMLResponse(content=str(response), media_type="application/xml")
 
 async def call_openai_api(endpoint, method, headers, data=None, files=None):
-    import ssl
-    ssl_context = ssl.create_default_context()
-    ssl_context.check_hostname = False
-    ssl_context.verify_mode = ssl.CERT_NONE
+    import aiohttp
+    url = f"https://api.openai.com{endpoint}"
     
-    uri = f"https://api.openai.com{endpoint}"
-    async with websockets.connect(f"wss://api.openai.com{endpoint}", ssl=ssl_context) as ws:
+    async with aiohttp.ClientSession() as session:
         if files:
-            boundary = "boundary"
-            form_data = (
-                f'--{boundary}\r\n'
-                f'Content-Disposition: form-data; name="file"; filename="audio.wav"\r\n'
-                f'Content-Type: audio/wav\r\n\r\n'
-            ).encode()
-            form_data += files['file'] + f'\r\n--{boundary}--\r\n'.encode()
-            await ws.send(form_data)
+            form = aiohttp.FormData()
+            for key, value in files.items():
+                if key == 'file':
+                    form.add_field('file', value, filename='audio.wav', content_type='audio/wav')
+                else:
+                    form.add_field(key, str(value))
+            async with session.post(url, headers=headers, data=form) as response:
+                return await response.json()
         else:
-            await ws.send(json.dumps(data))
-        
-        response = await ws.recv()
-        return json.loads(response)
+            async with session.post(url, headers=headers, json=data) as response:
+                return await response.json()
 
 @app.websocket("/media-stream")
 async def media_stream(websocket: WebSocket):
