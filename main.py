@@ -66,6 +66,6 @@ async def media_stream(websocket: WebSocket):
     finally:
         await websocket.close()
 
-if _name_ == "_main_":
+if __name__ == "_main_":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=PORT)
