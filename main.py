@@ -107,32 +107,26 @@ async def media_stream(websocket: WebSocket):
             )
             
             user_text = transcription.get('text', '')
-            print(f"🎤 Transcription: {user_text}")
-            
-            if user_text.strip():
-                # Get AI response using WebSocket
-                async with websockets.connect(
-                    'wss://api.openai.com/v1/audio/speech',
-                    extra_headers={'Authorization': f'Bearer {OPENAI_API_KEY}'}
-                ) as ws:
-                    await ws.send(json.dumps({
-                        "model": "gpt-3.5-turbo",
-                        "messages": [
-                            {"role": "system", "content": SYSTEM_MESSAGE},
-                            {"role": "user", "content": user_text}
-                        ],
-                        "stream": True,
-                        "voice": "alloy"
-                    }))
+            async def process_audio_stream(audio_data):
+                try:
+                    async with websockets.connect(
+                        'wss://api.openai.com/v1/audio/speech',
+                        extra_headers={
+                            'Authorization': f'Bearer {OPENAI_API_KEY}',
+                            'Content-Type': 'audio/wav'
+                        }
+                    ) as ws:
+                        await ws.send(audio_data)
+                        async for msg in ws:
+                            response = json.loads(msg)
+                            if 'audio' in response:
+                                await websocket.send_bytes(base64.b64decode(response['audio']))
+                except Exception as e:
+                    print(f"Error in audio stream: {e}")
 
-                    # Stream the audio response directly to Twilio
-                    async for msg in ws:
-                        audio_chunk = json.loads(msg)
-                        if 'audio_chunk' in audio_chunk:
-                            # Send audio directly to Twilio WebSocket
-                            await websocket.send_bytes(base64.b64decode(audio_chunk['audio_chunk']))
-                
-                print("✅ Audio streaming complete")
+            # Process the audio directly
+            await process_audio_stream(audio_data)
+            print("✅ Audio streaming complete")
         except Exception as e:
             print(f"❌ Error processing audio: {e}")
 
