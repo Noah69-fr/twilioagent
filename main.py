@@ -130,15 +130,24 @@ async def handle_media_stream(websocket: WebSocket):
             send_task = asyncio.create_task(send_to_twilio())
 
             async for message in websocket.iter_text():
-                data = json.loads(message)
-
-                if data['event'] == 'media' and openai_ws.open:
-                    audio_append = {
-                        "type": "input_audio_buffer.append",
-                        "audio": data['media']['payload']
-                    }
-                    await openai_ws.send(json.dumps(audio_append))
-                    audio_log.write(f"Received audio: {data['media']['payload']}\n")
+                try:
+                    data = json.loads(message)
+                    
+                    if data['event'] == 'media':
+                        audio_append = {
+                            "type": "input_audio_buffer.append",
+                            "audio": data['media']['payload']
+                        }
+                        await openai_ws.send(json.dumps(audio_append))
+                        audio_log.write(f"Received audio: {data['media']['payload']}\n")
+                    
+                    if data['event'] == 'start':
+                        stream_sid = data['start']['streamSid']
+                        print(f"Incoming stream has started\n{stream_sid}")
+                        
+                except Exception as e:
+                    print(f"Error processing message: {e}")
+                    continue
 
                 if data['event'] == 'start':
                     stream_sid = data['start']['streamSid']
