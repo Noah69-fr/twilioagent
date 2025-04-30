@@ -1,3 +1,4 @@
+
 import os
 import json
 import base64
@@ -7,11 +8,15 @@ from fastapi import FastAPI, WebSocket, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.websockets import WebSocketDisconnect
 from twilio.twiml.voice_response import VoiceResponse, Connect, Stream
+from dotenv import load_dotenv
+
+load_dotenv()
+
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PORT = int(os.getenv("PORT", 3000))  # Replit uses port 3000
 
 if not OPENAI_API_KEY:
-    raise ValueError("OPENAI_API_KEY is not set in Replit Secrets")
+    raise ValueError("OPENAI_API_KEY is not set in the .env file")
 
 app = FastAPI()
 
@@ -66,6 +71,6 @@ async def media_stream(websocket: WebSocket):
     finally:
         await websocket.close()
 
-if __name__ == "_main_":
+if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=PORT)
