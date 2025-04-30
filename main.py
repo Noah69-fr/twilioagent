@@ -110,33 +110,29 @@ async def media_stream(websocket: WebSocket):
             print(f"🎤 Transcription: {user_text}")
             
             if user_text.strip():
-                # Get AI response
-                chat_data = {
-                    "model": "gpt-3.5-turbo",
-                    "messages": [
-                        {"role": "system", "content": SYSTEM_MESSAGE},
-                        {"role": "user", "content": user_text}
-                    ]
-                }
+                # Get AI response using WebSocket
+                async with websockets.connect(
+                    'wss://api.openai.com/v1/audio/speech',
+                    extra_headers={'Authorization': f'Bearer {OPENAI_API_KEY}'}
+                ) as ws:
+                    await ws.send(json.dumps({
+                        "model": "gpt-3.5-turbo",
+                        "messages": [
+                            {"role": "system", "content": SYSTEM_MESSAGE},
+                            {"role": "user", "content": user_text}
+                        ],
+                        "stream": True,
+                        "voice": "alloy"
+                    }))
+
+                    # Stream the audio response directly to Twilio
+                    async for msg in ws:
+                        audio_chunk = json.loads(msg)
+                        if 'audio_chunk' in audio_chunk:
+                            # Send audio directly to Twilio WebSocket
+                            await websocket.send_bytes(base64.b64decode(audio_chunk['audio_chunk']))
                 
-                chat_result = await call_openai_api(
-                    '/v1/chat/completions',
-                    'POST',
-                    headers,
-                    data=chat_data
-                )
-                
-                ai_response = chat_result['choices'][0]['message']['content']
-                print(f"🤖 Réponse: {ai_response}")
-                
-                # Generate speech markup
-                twiml = VoiceResponse()
-                twiml.say(ai_response, language="fr-FR", voice="Polly.Lea-Neural")
-                
-                # Send TwiML response
-                print("📢 Sending voice response")
-                await websocket.send_text(str(twiml))
-                print("✅ Voice response sent")
+                print("✅ Audio streaming complete")
         except Exception as e:
             print(f"❌ Error processing audio: {e}")
 
