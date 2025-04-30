@@ -44,6 +44,55 @@ async def media_stream(websocket: WebSocket):
     await websocket.accept()
     print("✅ WebSocket Twilio connecté")
 
+    audio_buffer = b""
+    
+    async def process_audio_and_respond():
+        nonlocal audio_buffer
+        if len(audio_buffer) < 4000:  # Wait for enough audio data
+            return
+            
+        # Convert audio to file-like object
+        audio_data = audio_buffer
+        audio_buffer = b""  # Reset buffer
+        
+        # Transcribe with Whisper API
+        async with aiohttp.ClientSession() as session:
+            # First, transcribe the audio
+            headers = {
+                "Authorization": f"Bearer {OPENAI_API_KEY}"
+            }
+            data = aiohttp.FormData()
+            data.add_field('file', audio_data, filename='audio.wav', content_type='audio/wav')
+            data.add_field('model', 'whisper-1')
+            data.add_field('language', 'fr')
+            
+            async with session.post('https://api.openai.com/v1/audio/transcriptions', headers=headers, data=data) as resp:
+                if resp.status == 200:
+                    result = await resp.json()
+                    user_text = result.get('text', '')
+                    print(f"🎤 Transcription: {user_text}")
+                    
+                    if user_text.strip():
+                        # Get AI response
+                        chat_data = {
+                            "model": "gpt-3.5-turbo",
+                            "messages": [
+                                {"role": "system", "content": SYSTEM_MESSAGE},
+                                {"role": "user", "content": user_text}
+                            ]
+                        }
+                        
+                        async with session.post('https://api.openai.com/v1/chat/completions', headers=headers, json=chat_data) as chat_resp:
+                            if chat_resp.status == 200:
+                                chat_result = await chat_resp.json()
+                                ai_response = chat_result['choices'][0]['message']['content']
+                                print(f"🤖 Réponse: {ai_response}")
+                                
+                                # Send response back to user
+                                response = VoiceResponse()
+                                response.say(ai_response, language="fr-FR")
+                                await websocket.send_text(str(response))
+
     try:
         while True:
             message = await websocket.receive_text()
@@ -54,9 +103,8 @@ async def media_stream(websocket: WebSocket):
             elif data.get("event") == "media":
                 payload = data["media"]["payload"]
                 audio_bytes = base64.b64decode(payload)
-                # Here we should make an HTTP POST request to OpenAI's API
-                # using aiohttp or httpx for the actual implementation
-                print(f"🔊 Audio reçu – {len(audio_bytes)} octets")
+                audio_buffer += audio_bytes
+                await process_audio_and_respond()
             elif data.get("event") == "stop":
                 print("🛑 Stream terminé")
                 break
