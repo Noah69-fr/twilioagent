@@ -3,8 +3,9 @@ import os
 import json
 import base64
 import asyncio
-import aiohttp
 import websockets
+import http.client
+import urllib.parse
 from fastapi import FastAPI, WebSocket, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.websockets import WebSocketDisconnect
@@ -14,7 +15,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-PORT = int(os.getenv("PORT", 3000))  # Replit uses port 3000
+PORT = int(os.getenv("PORT", 3000))
 VOICE = 'alloy'
 LOG_EVENT_TYPES = [
     'response.content.done', 'rate_limits.updated', 'response.done',
@@ -46,6 +47,32 @@ async def handle_incoming_call(request: Request):
     response.append(connect)
     return HTMLResponse(content=str(response), media_type="application/xml")
 
+async def call_openai_api(endpoint, method, headers, data=None, files=None):
+    conn = http.client.HTTPSConnection("api.openai.com")
+    
+    if files:
+        boundary = 'boundary'
+        body = []
+        for key, value in files.items():
+            body.extend([
+                f'--{boundary}',
+                f'Content-Disposition: form-data; name="{key}"; filename="audio.wav"',
+                'Content-Type: audio/wav',
+                '',
+                value,
+            ])
+        body.extend([f'--{boundary}--', ''])
+        body = '\r\n'.join(body).encode('utf-8')
+        headers['Content-Type'] = f'multipart/form-data; boundary={boundary}'
+    else:
+        body = json.dumps(data).encode('utf-8') if data else None
+        
+    conn.request(method, endpoint, body=body, headers=headers)
+    response = conn.getresponse()
+    result = json.loads(response.read().decode())
+    conn.close()
+    return result
+
 @app.websocket("/media-stream")
 async def media_stream(websocket: WebSocket):
     await websocket.accept()
@@ -55,57 +82,59 @@ async def media_stream(websocket: WebSocket):
     
     async def process_audio_and_respond():
         nonlocal audio_buffer
-        if len(audio_buffer) < 8000:  # Wait for more audio data
+        if len(audio_buffer) < 8000:
             return
             
         print(f"🎵 Processing audio buffer of size: {len(audio_buffer)}")
-        # Convert audio to file-like object
         audio_data = audio_buffer
-        audio_buffer = b""  # Reset buffer
+        audio_buffer = b""
 
         try:
-        
-        # Transcribe with Whisper API
-        async with aiohttp.ClientSession() as session:
-            # First, transcribe the audio
             headers = {
                 "Authorization": f"Bearer {OPENAI_API_KEY}"
             }
-            data = aiohttp.FormData()
-            data.add_field('file', audio_data, filename='audio.wav', content_type='audio/wav')
-            data.add_field('model', 'whisper-1')
-            data.add_field('language', 'fr')
             
-            async with session.post('https://api.openai.com/v1/audio/transcriptions', headers=headers, data=data) as resp:
-                if resp.status == 200:
-                    result = await resp.json()
-                    user_text = result.get('text', '')
-                    print(f"🎤 Transcription: {user_text}")
-                    
-                    if user_text.strip():
-                        # Get AI response
-                        chat_data = {
-                            "model": "gpt-3.5-turbo",
-                            "messages": [
-                                {"role": "system", "content": SYSTEM_MESSAGE},
-                                {"role": "user", "content": user_text}
-                            ]
-                        }
-                        
-                        async with session.post('https://api.openai.com/v1/chat/completions', headers=headers, json=chat_data) as chat_resp:
-                            if chat_resp.status == 200:
-                                chat_result = await chat_resp.json()
-                                ai_response = chat_result['choices'][0]['message']['content']
-                                print(f"🤖 Réponse: {ai_response}")
-                                
-                                # Generate speech markup
-                                twiml = VoiceResponse()
-                                twiml.say(ai_response, language="fr-FR", voice="Polly.Lea")
-                                
-                                # Send TwiML response through WebSocket
-                                print("📢 Sending voice response")
-                                await websocket.send_text(str(twiml))
-                                print("✅ Voice response sent")
+            # Transcribe audio
+            transcription = await call_openai_api(
+                '/v1/audio/transcriptions',
+                'POST',
+                headers,
+                files={'file': audio_data, 'model': 'whisper-1', 'language': 'fr'}
+            )
+            
+            user_text = transcription.get('text', '')
+            print(f"🎤 Transcription: {user_text}")
+            
+            if user_text.strip():
+                # Get AI response
+                chat_data = {
+                    "model": "gpt-3.5-turbo",
+                    "messages": [
+                        {"role": "system", "content": SYSTEM_MESSAGE},
+                        {"role": "user", "content": user_text}
+                    ]
+                }
+                
+                chat_result = await call_openai_api(
+                    '/v1/chat/completions',
+                    'POST',
+                    headers,
+                    data=chat_data
+                )
+                
+                ai_response = chat_result['choices'][0]['message']['content']
+                print(f"🤖 Réponse: {ai_response}")
+                
+                # Generate speech markup
+                twiml = VoiceResponse()
+                twiml.say(ai_response, language="fr-FR", voice="Polly.Lea")
+                
+                # Send TwiML response
+                print("📢 Sending voice response")
+                await websocket.send_text(str(twiml))
+                print("✅ Voice response sent")
+        except Exception as e:
+            print(f"❌ Error processing audio: {e}")
 
     try:
         while True:
