@@ -71,9 +71,10 @@ async def handle_media_stream(websocket: WebSocket):
     await websocket.accept()
 
     async with websockets.connect(
-        "wss://api.openai.com/v1/audio/speech",
+        "wss://api.openai.com/v1/assistants-streaming",
         additional_headers={
             "Authorization": f"Bearer {OPENAI_API_KEY}",
+            "OpenAI-Beta": "assistants-streaming=v1",
             "Content-Type": "application/json"
         }
     ) as openai_ws:
