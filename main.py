@@ -48,32 +48,30 @@ async def handle_incoming_call(request: Request):
     return HTMLResponse(content=str(response), media_type="application/xml")
 
 async def call_openai_api(endpoint, method, headers, data=None, files=None):
-    conn = http.client.HTTPSConnection("api.openai.com")
-    
-    if files:
-        boundary = 'boundary'
-        body = bytearray()
-        for key, value in files.items():
-            if key == 'file':
-                body.extend(f'--{boundary}\r\n'.encode('utf-8'))
-                body.extend(f'Content-Disposition: form-data; name="file"; filename="audio.wav"\r\n'.encode('utf-8'))
-                body.extend(b'Content-Type: audio/wav\r\n\r\n')
-                body.extend(value)
-                body.extend(b'\r\n')
-            else:
-                body.extend(f'--{boundary}\r\n'.encode('utf-8'))
-                body.extend(f'Content-Disposition: form-data; name="{key}"\r\n\r\n'.encode('utf-8'))
-                body.extend(f'{value}\r\n'.encode('utf-8'))
-        body.extend(f'--{boundary}--\r\n'.encode('utf-8'))
-        headers['Content-Type'] = f'multipart/form-data; boundary={boundary}'
-    else:
-        body = json.dumps(data).encode('utf-8') if data else None
-        
-    conn.request(method, endpoint, body=body, headers=headers)
-    response = conn.getresponse()
-    result = json.loads(response.read().decode())
-    conn.close()
-    return result
+    uri = f"wss://api.openai.com{endpoint}"
+    async with websockets.connect(uri) as websocket:
+        if files:
+            # Handle file upload
+            boundary = 'boundary'
+            body = bytearray()
+            for key, value in files.items():
+                if key == 'file':
+                    body.extend(f'--{boundary}\r\n'.encode('utf-8'))
+                    body.extend(f'Content-Disposition: form-data; name="file"; filename="audio.wav"\r\n'.encode('utf-8'))
+                    body.extend(b'Content-Type: audio/wav\r\n\r\n')
+                    body.extend(value)
+                    body.extend(b'\r\n')
+                else:
+                    body.extend(f'--{boundary}\r\n'.encode('utf-8'))
+                    body.extend(f'Content-Disposition: form-data; name="{key}"\r\n\r\n'.encode('utf-8'))
+                    body.extend(f'{value}\r\n'.encode('utf-8'))
+            body.extend(f'--{boundary}--\r\n'.encode('utf-8'))
+            await websocket.send(body)
+        else:
+            await websocket.send(json.dumps(data))
+            
+        response = await websocket.recv()
+        return json.loads(response)
 
 @app.websocket("/media-stream")
 async def media_stream(websocket: WebSocket):
