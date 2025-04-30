@@ -4,8 +4,6 @@ import json
 import base64
 import asyncio
 import websockets
-import http.client
-import urllib.parse
 from fastapi import FastAPI, WebSocket, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.websockets import WebSocketDisconnect
