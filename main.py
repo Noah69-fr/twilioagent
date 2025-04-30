@@ -89,7 +89,8 @@ async def media_stream(websocket: WebSocket):
 
         try:
             headers = {
-                "Authorization": f"Bearer {OPENAI_API_KEY}"
+                "Authorization": f"Bearer {OPENAI_API_KEY}",
+                "Content-Type": "application/json"
             }
             
             # Transcribe audio
