@@ -142,7 +142,11 @@ async def handle_media_stream(websocket: WebSocket):
                                 "type": "input_audio_buffer.append",
                                 "audio": data['media']['payload']
                             }
-                            await openai_ws.send(json.dumps(audio_append))
+                            msg = json.dumps(audio_append)
+                            print(">> Sending:", msg)
+                            await openai_ws.send(msg)
+                            response = await openai_ws.recv()
+                            print("<< Received:", response)
                             audio_log.write(f"Received audio: {data['media']['payload']}\n")
                         
                         if data['event'] == 'start':
