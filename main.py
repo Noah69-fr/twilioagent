@@ -66,7 +66,7 @@ async def send_session_update(ws):
         "config": {
             "transcription_config": {
                 "encoding": "linear16",
-                "sample_rate_hz": 16000,
+                "sample_rate_hz": 8000,
                 "language_code": "fr-FR"
             },
             "response_format": "text"
