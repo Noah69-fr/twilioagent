@@ -53,6 +53,13 @@ async def handle_incoming_call(request: Request):
     response.append(connect)
     return HTMLResponse(content=str(response), media_type="text/xml")
 
+@app.post("/sync-call-history")
+async def sync_call_history(request: Request):
+    """Handle call history synchronization."""
+    data = await request.json()
+    print("Received sync-call-history:", data)
+    return {"status": "received"}
+
 async def send_session_update(ws):
     message = {
         "type": "session.update",
