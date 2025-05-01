@@ -65,7 +65,7 @@ async def send_session_update(ws):
         "type": "start",
         "config": {
             "transcription_config": {
-                "encoding": "linear16",
+                "encoding": "mulaw",
                 "sample_rate_hz": 8000,
                 "language_code": "fr-FR"
             },
@@ -94,7 +94,7 @@ async def handle_media_stream(websocket: WebSocket):
     await websocket.accept()
 
     async with websockets.connect(
-        'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17',
+        'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01',
         additional_headers=[
             ("Authorization", f"Bearer {OPENAI_API_KEY}"),
             ("OpenAI-Beta", "realtime=v1")
