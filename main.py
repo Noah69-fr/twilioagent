@@ -74,18 +74,14 @@ async def handle_media_stream(websocket: WebSocket):
     await websocket.accept()
 
     async with websockets.connect(
-        "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17",
+        'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01',
         additional_headers={
             "Authorization": f"Bearer {OPENAI_API_KEY}",
             "OpenAI-Beta": "realtime=v1"
         }
     ) as openai_ws:
 
-        # Send initial configuration
-        await openai_ws.send(json.dumps({
-            "type": "message",
-            "content": "Tu es un agent immobilier. Bonjour, je souhaite louer un appartement."
-        }))
+     
 
         await send_session_update(openai_ws)
         stream_sid = None
