@@ -129,10 +129,30 @@ async def handle_media_stream(websocket: WebSocket):
                 except Exception as e:
                     print(f"Error in send_to_twilio: {e}")
 
-            # Start bidirectional audio bridge
-            send_task = asyncio.create_task(send_to_twilio())
+            async def receive_from_twilio():
+                async for message in websocket.iter_text():
+                    try:
+                        data = json.loads(message)
+                        
+                        if data['event'] == 'media':
+                            audio_append = {
+                                "type": "input_audio_buffer.append",
+                                "audio": data['media']['payload']
+                            }
+                            await openai_ws.send(json.dumps(audio_append))
+                            audio_log.write(f"Received audio: {data['media']['payload']}\n")
+                        
+                        if data['event'] == 'start':
+                            nonlocal stream_sid
+                            stream_sid = data['start']['streamSid']
+                            print(f"Incoming stream has started\n{stream_sid}")
+                            
+                    except Exception as e:
+                        print(f"Error processing message: {e}")
+                        continue
 
-            async for message in websocket.iter_text():
+            # Start bidirectional audio bridge
+            await asyncio.gather(receive_from_twilio(), send_to_twilio())
                 try:
                     data = json.loads(message)
                     
