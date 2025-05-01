@@ -61,7 +61,20 @@ async def sync_call_history(request: Request):
     return {"status": "received"}
 
 async def send_session_update(ws):
-    message = {
+    start_message = {
+        "type": "start",
+        "config": {
+            "transcription_config": {
+                "encoding": "linear16",
+                "sample_rate_hz": 16000,
+                "language_code": "fr-FR"
+            },
+            "response_format": "text"
+        }
+    }
+    await ws.send(json.dumps(start_message))
+    
+    session_message = {
         "type": "session.update",
         "input_audio_config": {
             "encoding": "audio/x-mulaw",
@@ -72,7 +85,7 @@ async def send_session_update(ws):
             "sample_rate": 8000
         }
     }
-    await ws.send(json.dumps(message))
+    await ws.send(json.dumps(session_message))
 
 @app.websocket("/media-stream")
 async def handle_media_stream(websocket: WebSocket):
