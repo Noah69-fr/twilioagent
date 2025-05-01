@@ -9,6 +9,7 @@ from fastapi import FastAPI, WebSocket, Request
 from fastapi.responses import HTMLResponse
 from fastapi.websockets import WebSocketDisconnect
 from twilio.twiml.voice_response import VoiceResponse, Connect
+import uvicorn
 from dotenv import load_dotenv
 from datetime import datetime
 
