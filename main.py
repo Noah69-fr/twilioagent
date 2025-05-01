@@ -51,7 +51,7 @@ async def handle_incoming_call(request: Request):
     connect = Connect()
     connect.stream(url=f"wss://{host}/media-stream")
     response.append(connect)
-    return HTMLResponse(content=str(response), media_type="application/xml")
+    return HTMLResponse(content=str(response), media_type="text/xml")
 
 async def send_session_update(ws):
     message = {
