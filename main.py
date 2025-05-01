@@ -49,7 +49,8 @@ async def handle_incoming_call(request: Request):
     response = VoiceResponse()
     host = request.url.hostname
     connect = Connect()
-    connect.stream(url="wss://bb747b37-cb72-4d5d-83d6-84ff697bfa2d-00-pvflh27yedzd.janeway.replit.dev/media-stream")
+    connect.stream(url=f"wss://{host}/media-stream")
+)
 
     response.append(connect)
     return HTMLResponse(content=str(response), media_type="text/xml")
